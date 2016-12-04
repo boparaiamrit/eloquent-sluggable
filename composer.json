@@ -1,5 +1,5 @@
 {
-  "name": "cviebrock/eloquent-sluggable",
+  "name": "boparaiamrit/sluggable",
   "description": "Easy creation of slugs for your Eloquent models in Laravel",
   "keywords": [
     "laravel",
