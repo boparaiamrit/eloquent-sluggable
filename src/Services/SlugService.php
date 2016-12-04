@@ -1,36 +1,37 @@
-<?php namespace Cviebrock\EloquentSluggable\Services;
+<?php namespace Boparaiamrit\Sluggable\Services;
 
 use Cocur\Slugify\Slugify;
-use Illuminate\Database\Eloquent\Model;
+use Jenssegers\Mongodb\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 /**
  * Class SlugService
  *
- * @package Cviebrock\EloquentSluggable\Services
+ * @package Boparaiamrit\Sluggable\Services
  */
 class SlugService
 {
 
     /**
-     * @var \Illuminate\Database\Eloquent\Model;
+     * @var Model;
      */
-    protected $model;
+    protected $Model;
 
     /**
      * Slug the current model.
      *
-     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param Model $Model
      * @param bool $force
      * @return bool
      */
-    public function slug(Model $model, $force = false)
+    public function slug(Model $Model, $force = false)
     {
-        $this->setModel($model);
+        $this->setModel($Model);
 
         $attributes = [];
-
-        foreach ($this->model->sluggable() as $attribute => $config) {
+	
+		/** @noinspection PhpUndefinedMethodInspection */
+		foreach ($this->Model->sluggable() as $attribute => $config) {
             if (is_numeric($attribute)) {
                 $attribute = $config;
                 $config = $this->getConfiguration();
@@ -40,12 +41,12 @@ class SlugService
 
             $slug = $this->buildSlug($attribute, $config, $force);
 
-            $this->model->setAttribute($attribute, $slug);
+            $this->Model->setAttribute($attribute, $slug);
 
             $attributes[] = $attribute;
         }
 
-        return $this->model->isDirty($attributes);
+        return $this->Model->isDirty($attributes);
     }
 
     /**
@@ -75,7 +76,7 @@ class SlugService
      */
     public function buildSlug($attribute, array $config, $force = null)
     {
-        $slug = $this->model->getAttribute($attribute);
+        $slug = $this->Model->getAttribute($attribute);
 
         if ($force || $this->needsSlugging($attribute, $config)) {
             $source = $this->getSlugSource($config['source']);
@@ -100,17 +101,17 @@ class SlugService
     protected function needsSlugging($attribute, array $config)
     {
         if (
-            empty($this->model->getAttributeValue($attribute)) ||
+            empty($this->Model->getAttributeValue($attribute)) ||
             $config['onUpdate'] === true
         ) {
             return true;
         }
 
-        if ($this->model->isDirty($attribute)) {
+        if ($this->Model->isDirty($attribute)) {
             return false;
         }
 
-        return (!$this->model->exists);
+        return (!$this->Model->exists);
     }
 
     /**
@@ -122,11 +123,11 @@ class SlugService
     protected function getSlugSource($from)
     {
         if (is_null($from)) {
-            return $this->model->__toString();
+            return $this->Model->__toString();
         }
 
         $sourceStrings = array_map(function ($key) {
-            return data_get($this->model, $key);
+            return data_get($this->Model, $key);
         }, (array)$from);
 
         return join($sourceStrings, ' ');
@@ -152,7 +153,7 @@ class SlugService
         } elseif (is_callable($method)) {
             $slug = call_user_func($method, $source, $separator);
         } else {
-            throw new \UnexpectedValueException('Sluggable "method" for ' . get_class($this->model) . ':' . $attribute . ' is not callable nor null.');
+            throw new \UnexpectedValueException('Sluggable "method" for ' . get_class($this->Model) . ':' . $attribute . ' is not callable nor null.');
         }
 
         if (is_string($slug) && $maxLength) {
@@ -173,12 +174,12 @@ class SlugService
     {
         static $slugEngines = [];
 
-        $key = get_class($this->model) . '.' . $attribute;
+        $key = get_class($this->Model) . '.' . $attribute;
 
         if (!array_key_exists($key, $slugEngines)) {
             $engine = new Slugify();
-            if (method_exists($this->model, 'customizeSlugEngine')) {
-                $engine = $this->model->customizeSlugEngine($engine, $attribute);
+            if (method_exists($this->Model, 'customizeSlugEngine')) {
+                $engine = $this->Model->customizeSlugEngine($engine, $attribute);
             }
 
             $slugEngines[$key] = $engine;
@@ -206,7 +207,7 @@ class SlugService
 
         // check for reserved names
         if ($reserved instanceof \Closure) {
-            $reserved = $reserved($this->model);
+            $reserved = $reserved($this->Model);
         }
 
         if (is_array($reserved)) {
@@ -217,7 +218,7 @@ class SlugService
             return $slug;
         }
 
-        throw new \UnexpectedValueException('Sluggable "reserved" for ' . get_class($this->model) . ':' . $attribute . ' is not null, an array, or a closure that returns null/array.');
+        throw new \UnexpectedValueException('Sluggable "reserved" for ' . get_class($this->Model) . ':' . $attribute . ' is not null, an array, or a closure that returns null/array.');
     }
 
     /**
@@ -254,8 +255,8 @@ class SlugService
         // 	a) it's for our model, or
         //  b) it looks like a suffixed version of our slug
         // ... we are also okay (use the current slug)
-        if ($list->has($this->model->getKey())) {
-            $currentSlug = $list->get($this->model->getKey());
+        if ($list->has($this->Model->getKey())) {
+            $currentSlug = $list->get($this->Model->getKey());
 
             if (
                 $currentSlug === $slug ||
@@ -271,7 +272,7 @@ class SlugService
         } elseif (is_callable($method)) {
             $suffix = call_user_func($method, $slug, $separator, $list);
         } else {
-            throw new \UnexpectedValueException('Sluggable "reserved" for ' . get_class($this->model) . ':' . $attribute . ' is not null, an array, or a closure that returns null/array.');
+            throw new \UnexpectedValueException('Sluggable "reserved" for ' . get_class($this->Model) . ':' . $attribute . ' is not null, an array, or a closure that returns null/array.');
         }
 
         return $slug . $separator . $suffix;
@@ -291,13 +292,14 @@ class SlugService
 
         // If the slug already exists, but belongs to
         // our model, return the current suffix.
-        if ($list->search($slug) === $this->model->getKey()) {
+        if ($list->search($slug) === $this->Model->getKey()) {
             $suffix = explode($separator, $slug);
 
             return end($suffix);
         }
-
-        $list->transform(function ($value, $key) use ($len) {
+	
+		/** @noinspection PhpUnusedParameterInspection */
+		$list->transform(function ($value, $key) use ($len) {
             return intval(substr($value, $len));
         });
 
@@ -316,27 +318,32 @@ class SlugService
     protected function getExistingSlugs($slug, $attribute, array $config)
     {
         $includeTrashed = $config['includeTrashed'];
-
-        $query = $this->model->newQuery()
-            ->findSimilarSlugs($this->model, $attribute, $config, $slug);
+	
+		/** @noinspection PhpUndefinedMethodInspection */
+		$query          = $this->Model->newQuery()
+									  ->findSimilarSlugs($this->Model, $attribute, $config, $slug);
 
         // use the model scope to find similar slugs
-        if (method_exists($this->model, 'scopeWithUniqueSlugConstraints')) {
-            $query->withUniqueSlugConstraints($this->model, $attribute, $config, $slug);
+        if (method_exists($this->Model, 'scopeWithUniqueSlugConstraints')) {
+			/** @noinspection PhpUndefinedMethodInspection */
+			$query->withUniqueSlugConstraints($this->Model, $attribute, $config, $slug);
         }
 
         // include trashed models if required
         if ($includeTrashed && $this->usesSoftDeleting()) {
-            $query->withTrashed();
+			/** @noinspection PhpUndefinedMethodInspection */
+			$query->withTrashed();
         }
 
         // get the list of all matching slugs
-        $results = $query->select([$attribute, $this->model->getTable() . '.' . $this->model->getKeyName()])
-            ->get()
-            ->toBase();
+		/** @noinspection PhpUndefinedMethodInspection */
+		$results = $query->select([$attribute, $this->Model->getTable() . '.' . $this->Model->getKeyName()])
+						 ->get()
+						 ->toBase();
 
         // key the results and return
-        return $results->pluck($attribute, $this->model->getKeyName());
+		/** @noinspection PhpUndefinedMethodInspection */
+		return $results->pluck($attribute, $this->Model->getKeyName());
     }
 
     /**
@@ -346,27 +353,28 @@ class SlugService
      */
     protected function usesSoftDeleting()
     {
-        return method_exists($this->model, 'bootSoftDeletes');
+        return method_exists($this->Model, 'bootSoftDeletes');
     }
 
     /**
      * Generate a unique slug for a given string.
      *
-     * @param \Illuminate\Database\Eloquent\Model|string $model
+     * @param Model|string $Model
      * @param string $attribute
      * @param string $fromString
      * @param array $config
      * @return string
      */
-    public static function createSlug($model, $attribute, $fromString, array $config = null)
+    public static function createSlug($Model, $attribute, $fromString, array $config = null)
     {
-        if (is_string($model)) {
-            $model = new $model;
+        if (is_string($Model)) {
+            $Model = new $Model;
         }
-        $instance = (new self())->setModel($model);
+        $instance = (new self())->setModel($Model);
 
         if ($config === null) {
-            $config = array_get($model->sluggable(), $attribute);
+			/** @noinspection PhpUndefinedMethodInspection */
+			$config = array_get($Model->sluggable(), $attribute);
         } elseif (!is_array($config)) {
             throw new \UnexpectedValueException('SlugService::createSlug expects an array or null as the fourth argument; ' . gettype($config) . ' given.');
         }
@@ -381,12 +389,12 @@ class SlugService
     }
 
     /**
-     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param Model $Model
      * @return $this
      */
-    public function setModel(Model $model)
+    public function setModel(Model $Model)
     {
-        $this->model = $model;
+        $this->Model = $Model;
 
         return $this;
     }
