@@ -1,8 +1,8 @@
 <?php namespace Boparaiamrit\Sluggable\Services;
 
 use Cocur\Slugify\Slugify;
-use Jenssegers\Mongodb\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Jenssegers\Mongodb\Eloquent\Model;
 
 /**
  * Class SlugService
@@ -21,7 +21,8 @@ class SlugService
      * Slug the current model.
      *
      * @param Model $Model
-     * @param bool $force
+     * @param bool  $force
+     *
      * @return bool
      */
     public function slug(Model $Model, $force = false)
@@ -29,9 +30,9 @@ class SlugService
         $this->setModel($Model);
 
         $attributes = [];
-	
-		/** @noinspection PhpUndefinedMethodInspection */
-		foreach ($this->Model->sluggable() as $attribute => $config) {
+
+        /** @noinspection PhpUndefinedMethodInspection */
+        foreach ($this->Model->sluggable() as $attribute => $config) {
             if (is_numeric($attribute)) {
                 $attribute = $config;
                 $config = $this->getConfiguration();
@@ -54,6 +55,7 @@ class SlugService
      * including default values where not specified.
      *
      * @param array $overrides
+     *
      * @return array
      */
     public function getConfiguration(array $overrides = [])
@@ -70,8 +72,9 @@ class SlugService
      * Build the slug for the given attribute of the current model.
      *
      * @param string $attribute
-     * @param array $config
-     * @param bool $force
+     * @param array  $config
+     * @param bool   $force
+     *
      * @return null|string
      */
     public function buildSlug($attribute, array $config, $force = null)
@@ -95,7 +98,8 @@ class SlugService
      * Determines whether the model needs slugging.
      *
      * @param string $attribute
-     * @param array $config
+     * @param array  $config
+     *
      * @return bool
      */
     protected function needsSlugging($attribute, array $config)
@@ -118,6 +122,7 @@ class SlugService
      * Get the source string for the slug.
      *
      * @param mixed $from
+     *
      * @return string
      */
     protected function getSlugSource($from)
@@ -137,8 +142,9 @@ class SlugService
      * Generate a slug from the given source string.
      *
      * @param string $source
-     * @param array $config
+     * @param array  $config
      * @param string $attribute
+     *
      * @return string
      */
     protected function generateSlug($source, array $config, $attribute)
@@ -168,6 +174,7 @@ class SlugService
      * strings into slugs.
      *
      * @param string $attribute
+     *
      * @return Slugify
      */
     protected function getSlugEngine($attribute)
@@ -192,8 +199,9 @@ class SlugService
      * Checks that the given slug is not a reserved word.
      *
      * @param string $slug
-     * @param array $config
+     * @param array  $config
      * @param string $attribute
+     *
      * @return string
      */
     protected function validateSlug($slug, array $config, $attribute)
@@ -225,8 +233,9 @@ class SlugService
      * Checks if the slug should be unique, and makes it so if needed.
      *
      * @param string $slug
-     * @param array $config
+     * @param array  $config
      * @param string $attribute
+     *
      * @return string
      */
     protected function makeSlugUnique($slug, array $config, $attribute)
@@ -281,9 +290,10 @@ class SlugService
     /**
      * Generate a unique suffix for the given slug (and list of existing, "similar" slugs.
      *
-     * @param string $slug
-     * @param string $separator
+     * @param string                         $slug
+     * @param string                         $separator
      * @param \Illuminate\Support\Collection $list
+     *
      * @return string
      */
     protected function generateSuffix($slug, $separator, Collection $list)
@@ -297,9 +307,9 @@ class SlugService
 
             return end($suffix);
         }
-	
-		/** @noinspection PhpUnusedParameterInspection */
-		$list->transform(function ($value, $key) use ($len) {
+
+        /** @noinspection PhpUnusedParameterInspection */
+        $list->transform(function ($value, $key) use ($len) {
             return intval(substr($value, $len));
         });
 
@@ -312,38 +322,39 @@ class SlugService
      *
      * @param string $slug
      * @param string $attribute
-     * @param array $config
+     * @param array  $config
+     *
      * @return \Illuminate\Support\Collection
      */
     protected function getExistingSlugs($slug, $attribute, array $config)
     {
         $includeTrashed = $config['includeTrashed'];
-	
-		/** @noinspection PhpUndefinedMethodInspection */
-		$query          = $this->Model->newQuery()
-									  ->findSimilarSlugs($this->Model, $attribute, $config, $slug);
+
+        /** @noinspection PhpUndefinedMethodInspection */
+        $query = $this->Model->newQuery()
+            ->findSimilarSlugs($this->Model, $attribute, $config, $slug);
 
         // use the model scope to find similar slugs
         if (method_exists($this->Model, 'scopeWithUniqueSlugConstraints')) {
-			/** @noinspection PhpUndefinedMethodInspection */
-			$query->withUniqueSlugConstraints($this->Model, $attribute, $config, $slug);
+            /** @noinspection PhpUndefinedMethodInspection */
+            $query->withUniqueSlugConstraints($this->Model, $attribute, $config, $slug);
         }
 
         // include trashed models if required
         if ($includeTrashed && $this->usesSoftDeleting()) {
-			/** @noinspection PhpUndefinedMethodInspection */
-			$query->withTrashed();
+            /** @noinspection PhpUndefinedMethodInspection */
+            $query->withTrashed();
         }
 
         // get the list of all matching slugs
-		/** @noinspection PhpUndefinedMethodInspection */
-		$results = $query->select([$attribute, $this->Model->getTable() . '.' . $this->Model->getKeyName()])
-						 ->get()
-						 ->toBase();
+        /** @noinspection PhpUndefinedMethodInspection */
+        $results = $query->select([$attribute, $this->Model->getTable() . '.' . $this->Model->getKeyName()])
+            ->get()
+            ->toBase();
 
         // key the results and return
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $results->pluck($attribute, $this->Model->getKeyName());
+        /** @noinspection PhpUndefinedMethodInspection */
+        return $results->pluck($attribute, $this->Model->getKeyName());
     }
 
     /**
@@ -360,9 +371,10 @@ class SlugService
      * Generate a unique slug for a given string.
      *
      * @param Model|string $Model
-     * @param string $attribute
-     * @param string $fromString
-     * @param array $config
+     * @param string       $attribute
+     * @param string       $fromString
+     * @param array        $config
+     *
      * @return string
      */
     public static function createSlug($Model, $attribute, $fromString, array $config = null)
@@ -373,8 +385,8 @@ class SlugService
         $instance = (new self())->setModel($Model);
 
         if ($config === null) {
-			/** @noinspection PhpUndefinedMethodInspection */
-			$config = array_get($Model->sluggable(), $attribute);
+            /** @noinspection PhpUndefinedMethodInspection */
+            $config = array_get($Model->sluggable(), $attribute);
         } elseif (!is_array($config)) {
             throw new \UnexpectedValueException('SlugService::createSlug expects an array or null as the fourth argument; ' . gettype($config) . ' given.');
         }
@@ -390,6 +402,7 @@ class SlugService
 
     /**
      * @param Model $Model
+     *
      * @return $this
      */
     public function setModel(Model $Model)
